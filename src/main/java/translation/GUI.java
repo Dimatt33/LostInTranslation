@@ -1,6 +1,8 @@
 package translation;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -15,6 +17,13 @@ public class GUI {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             Translator translator = new JSONTranslator();
+
+            //  result
+            JPanel buttonPanel = new JPanel();
+            JLabel resultLabelText = new JLabel("Translation:");
+            buttonPanel.add(resultLabelText);
+            JLabel resultLabel = new JLabel("\t\t\t\t\t\t\t");
+            buttonPanel.add(resultLabel);
 
             // translation JList
             JPanel countryPanel = new JPanel();
@@ -44,25 +53,11 @@ public class GUI {
                 LanguageCodeConverter languageCodeConverter = new LanguageCodeConverter();
                 languageComboBox.addItem(languageCodeConverter.fromLanguageCode(languageCode));
             }
-            languagePanel.add(languageComboBox);
-
-            //  button
-            JPanel buttonPanel = new JPanel();
-            JButton submit = new JButton("Submit");
-            buttonPanel.add(submit);
 
 
-            // result
-            JLabel resultLabelText = new JLabel("Translation:");
-            buttonPanel.add(resultLabelText);
-            JLabel resultLabel = new JLabel("\t\t\t\t\t\t\t");
-            buttonPanel.add(resultLabel);
-
-
-            // adding listener for when the user clicks the submit button
-            submit.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
+            // JList listener for selections to update translation result
+            list.addListSelectionListener(new ListSelectionListener() {
+                public void valueChanged(ListSelectionEvent e) {
                     // Get selected language from combo box
                     String selectedLanguage = (String) languageComboBox.getSelectedItem();
                     LanguageCodeConverter languageConverter = new LanguageCodeConverter();
@@ -102,10 +97,59 @@ public class GUI {
                     } else {
                         resultLabel.setText("no translation found!");
                     }
-
                 }
-
             });
+
+
+            // add listener for combobox selections to update translation result
+            languageComboBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    if (e.getStateChange() == ItemEvent.SELECTED) {
+                        // Get selected language from combo box
+                        String selectedLanguage = (String) languageComboBox.getSelectedItem();
+                        LanguageCodeConverter languageConverter = new LanguageCodeConverter();
+                        String languageCode = languageConverter.fromLanguage(selectedLanguage);
+
+                        // Get selected countries from JList
+                        java.util.List<String> selectedCountries = list.getSelectedValuesList();
+                        if (selectedCountries.isEmpty()) {
+                            resultLabel.setText("Please select at least one country");
+                            return;
+                        }
+
+                        // Translate for each selected country
+                        CountryCodeConverter countryConverter = new CountryCodeConverter();
+                        StringBuilder results = new StringBuilder();
+                        for (String countryName : selectedCountries) {
+                            String countryCode = countryConverter.fromCountry(countryName);
+
+                            // convert to lower case
+                            if (countryCode != null) {
+                                countryCode = countryCode.toLowerCase();
+                            }
+
+                            // System.out.println("Debug - Country: " + countryName + " -> Code: " + countryCode);
+                            // System.out.println("Debug - Language: " + selectedLanguage + " -> Code: " + languageCode);
+
+                            String translation = translator.translate(countryCode, languageCode);
+
+                            // System.out.println("Debug - Translation result: " + translation);
+                            if (translation != null) {
+                                results.append(translation);
+                            }
+                        }
+
+                        if (results.length() > 0) {
+                            resultLabel.setText(results.toString());
+                        } else {
+                            resultLabel.setText("no translation found!");
+                        }
+                    }
+                }
+            });
+            languagePanel.add(languageComboBox);
+
 
             JPanel mainPanel = new JPanel();
             mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
